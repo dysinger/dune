@@ -56,6 +56,8 @@ module Lang : sig
 end
 
 module Extension : sig
+  type 'a key
+
   (** [register id parser] registers a new extension. Users will
       enable this extension by writing:
 
@@ -64,6 +66,13 @@ module Extension : sig
       in their [dune-project] file. [parser] is used to describe
       what [<args>] might be. *)
   val register
+    :  ?experimental:bool
+    -> Syntax.t
+    -> ('a * Stanza.Parser.t list) Dsexp.Of_sexp.t
+    -> ('a -> Sexp.t)
+    -> 'a key
+
+  val register_no_args
     :  ?experimental:bool
     -> Syntax.t
     -> Stanza.Parser.t list Dsexp.Of_sexp.t
@@ -93,3 +102,6 @@ val append_to_project_file : t -> string -> unit
 (** Set the project we are currently parsing dune files for *)
 val set : t -> ('a, 'k) Dsexp.Of_sexp.parser -> ('a, 'k) Dsexp.Of_sexp.parser
 val get_exn : unit -> (t, 'k) Dsexp.Of_sexp.parser
+
+(** Find arguments passed to (using) *)
+val find_extension_args : t -> 'a Extension.key -> 'a option

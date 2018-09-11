@@ -211,12 +211,20 @@ module Gen(P : Install_rules.Params) = struct
     executables_rules t.exes ~dir ~scope ~dir_kind
       ~dir_contents
 
+  let gen_format_rules sctx ~dir ~scope =
+    let project = Scope.project scope in
+    match Dune_project.find_extension_args project Auto_format.key with
+    | None -> ()
+    | Some config ->
+      Format_rules.gen_rules sctx config ~dir ~scope
+
   (* +-----------------------------------------------------------------+
      | Stanza                                                          |
      +-----------------------------------------------------------------+ *)
 
   let gen_rules dir_contents
         { SC.Dir_with_jbuild. src_dir; ctx_dir; stanzas; scope; kind } =
+    gen_format_rules sctx ~dir:ctx_dir ~scope;
     let merlins, cctxs =
       let rec loop stanzas merlins cctxs =
         let dir = ctx_dir in

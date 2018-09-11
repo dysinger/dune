@@ -20,15 +20,21 @@ let make ?(quoted=false) loc part =
 let make_text ?quoted loc s =
   make ?quoted loc (Text s)
 
-let make_var ?quoted loc name =
+let make_var_args ?quoted loc name payload =
   let var =
     { loc
     ; name
-    ; payload = None
+    ; payload
     ; syntax = Percent
   }
   in
   make ?quoted loc (Var var)
+
+let make_var ?quoted loc name =
+  make_var_args ?quoted loc name None
+
+let make_macro ?quoted loc macro param =
+  make_var_args ?quoted loc macro (Some param)
 
 let literal ~quoted ~loc s =
   { parts = [Text s]

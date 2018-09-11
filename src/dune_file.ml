@@ -650,6 +650,62 @@ end
 
 let modules_field name = Ordered_set_lang.field name
 
+module Auto_format = struct
+  let syntax =
+    Syntax.create ~name:"fmt"
+      ~desc:"integration with automatic formatters"
+      [ (1, 0) ]
+
+  type language =
+    | Ocaml
+    | Reason
+
+  let language_to_sexp = function
+    | Ocaml -> Sexp.Atom "ocaml"
+    | Reason -> Sexp.Atom "reason"
+
+  let language =
+    sum
+      [ ("ocaml", return Ocaml)
+      ; ("reason", return Reason)
+      ]
+
+  type enabled_for =
+    | Default
+    | Only of language list
+
+  let enabled_for_field =
+    let%map r = field_o "enabled_for" (repeat language) in
+    match r with
+    | Some l -> Only l
+    | None -> Default
+
+  let enabled_for_to_sexp =
+    function
+      | Default -> Sexp.Atom "default"
+      | Only l -> List [Atom "only"; List (List.map ~f:language_to_sexp l)]
+
+  type t =
+    { loc : Loc.t
+    ; enabled_for : enabled_for
+    }
+
+  let to_sexp {loc; enabled_for} =
+    Sexp.List
+      [ List [Atom "loc"; Loc.to_sexp loc]
+      ; List [Atom "enabled_for"; enabled_for_to_sexp enabled_for]
+      ]
+
+  let dparse =
+    let%map loc = loc
+    and enabled_for = record enabled_for_field
+    in
+    ({loc; enabled_for}, [])
+
+  let key =
+    Dune_project.Extension.register syntax dparse to_sexp
+end
+
 module Buildable = struct
   type t =
     { loc                      : Loc.t
@@ -845,7 +901,8 @@ module Library = struct
           ~desc:"the experimental variants feature"
           [ (0, 1) ]
       in
-      Dune_project.Extension.register ~experimental:true
+      Dune_project.Extension.register_no_args
+        ~experimental:true
         syntax (Dsexp.Of_sexp.return []);
       syntax
   end
@@ -888,8 +945,10 @@ module Library = struct
           ~desc:"experimental feature for building the compiler with dune"
           [ (0, 1) ]
       in
-      Dune_project.Extension.register ~experimental:true
-        syntax (Dsexp.Of_sexp.return []);
+      Dune_project.Extension.register_no_args
+        ~experimental:true
+        syntax
+        (Dsexp.Of_sexp.return []);
       syntax
 
     let glob =
@@ -1693,7 +1752,8 @@ module Menhir = struct
   type Stanza.t += T of t
 
   let () =
-    Dune_project.Extension.register syntax
+    Dune_project.Extension.register_no_args
+      syntax
       (return [ "menhir", dparse >>| fun x -> [T x] ])
 
   (* Syntax for jbuild files *)
